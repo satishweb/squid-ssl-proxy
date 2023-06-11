@@ -81,6 +81,7 @@ chmod 644 ${SQUID_CONFIG_DIR}/*.conf
 create_cert
 clear_certs_db
 squid -z >/dev/null 2>&1 || true # Ignore the errors
+rm -f /var/run/squid.pid >/dev/null 2>&1 || true
 
 printf "| ENTRYPOINT: \033[0;31mStarting squid proxy server \033[0m\n"
 printf "|---------------------------------------------------------------------------------------------\n";
