@@ -1,8 +1,8 @@
 # Squid SSL Proxy with SSLBump ![Logo](images/squid-logo.png) [Works on Raspberry Pi]
-Container image for Squid SSL proxy server with SSL Bump eabled. SSLBump (Squid-in-the-middle) does the decryption and encryption of straight CONNECT and transparently redirected SSL traffic, using configurable CA certificates.
+Container image for Squid SSL proxy server with SSL Bump enabled. SSLBump (Squid-in-the-middle) does the decryption and encryption of straight CONNECT and transparently redirected SSL traffic, using configurable CA certificates.
 
 ## :x: WARNING :x:
-Use this Squid SSL Proxy with SSLBump only with the user consent. [Legal Warning](#legal-warning)
+Use this Squid SSL Proxy with SSLBump only with the user's consent. [Legal Warning](#legal-warning)
 
 ## Requirements
 1. Docker Compose
