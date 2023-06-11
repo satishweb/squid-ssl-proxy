@@ -12,7 +12,7 @@ Use this Squid SSL Proxy with SSLBump only with the user's consent. [Legal Warni
 1. Download the [latest release](https://github.com/satishweb/squid-ssl-proxy/releases/latest) and unzip.
 
 ```shell
-curl -s https://api.github.com/repos/satishweb/squid-ssl-proxy/releases/latest|grep "tarball_url" | head -1|awk -F '[:"]' '{print $5":"$6}'| xargs curl -L -o release.tar.gz && tar zxf release.tar.gz && rm release.tar.gz; mv satishweb-* squid-ssl-proxy
+curl -s https://api.github.com/repos/satishweb/squid-ssl-proxy/releases/latest|grep "tarball_url" | head -1|awk -F '[:"]' '{print $5":"$6}'| xargs curl -L -o release.tar.gz && tar zxf release.tar.gz && rm release.tar.gz; mv satishweb-* squid-ssl-proxy && cd squid-ssl-proxy && rm -rf images Dockerfile .do* .git* build.sh Makefile conf scripts && cd - 
 ```
 
 2. (Optional) Edit `docker-compose.yml` file
