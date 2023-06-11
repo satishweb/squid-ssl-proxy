@@ -25,4 +25,6 @@ services:
       - ./data/log:/var/log/
       - ./data/cache:/var/cache
       - ./data/cert:/etc/squid-cert
+      # - ./conf/squid.sample.conf:/templates/squid.sample.conf
+      # - ./scripts/entrypoint.sh /entrypoint
     restart: always
