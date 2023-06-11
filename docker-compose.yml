@@ -5,7 +5,7 @@ networks:
   proxy:
 
 services:
-  squid-alpine-ssl:
+  squid:
     image: satishweb/squid-ssl-proxy:latest
     networks:
       - proxy
