@@ -1,0 +1,13 @@
+#!/bin/sh
+# Author: Satish Gaikwad <satish@satishweb.com>
+# FILE NAME: app-config
+
+set -e
+
+## Customizations
+# Here you can manipulate your configuration files or execute prep commands before shell is started inside the container
+# You can pretty much do anything here
+# Please read /entrypoint script before writing any code here
+
+# Launch app
+exec $@
