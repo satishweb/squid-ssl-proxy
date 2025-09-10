@@ -132,15 +132,15 @@ __checkSource() {
 
 __setupDocker() {
   # Lets prepare docker image
-  if [[ "$imgPush" == "yes" ]]; then
-    echo "INFO: Logging in to Docker HUB... (Interactive Mode)"
-    sudo docker login 2>&1 | sed 's/^/INFO: DOCKER: /g'
-    __errCheck "$?" "Docker login failed..."
-    extraDockerArgs+=" --push"
-  fi
-  sudo docker buildx create --name builder >/dev/null 2>&1
-  sudo docker buildx use builder >/dev/null 2>&1
-  __errCheck "$?" "Could not use docker buildx default runner..."
+  #if [[ "$imgPush" == "yes" ]]; then
+  #  echo "INFO: Logging in to Docker HUB... (Interactive Mode)"
+  #  sudo docker login 2>&1 | sed 's/^/INFO: DOCKER: /g'
+  #  __errCheck "$?" "Docker login failed..."
+  #  extraDockerArgs+=" --push"
+  #fi
+  #sudo docker buildx create --name builder >/dev/null 2>&1
+  #sudo docker buildx use builder >/dev/null 2>&1
+  #__errCheck "$?" "Could not use docker buildx default runner..."
 }
 
 __createGitTag() {
