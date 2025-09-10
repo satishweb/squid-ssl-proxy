@@ -131,6 +131,7 @@ __checkSource() {
 }
 
 __setupDocker() {
+  echo "Skipping docker setup"
   # Lets prepare docker image
   #if [[ "$imgPush" == "yes" ]]; then
   #  echo "INFO: Logging in to Docker HUB... (Interactive Mode)"
