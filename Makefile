@@ -46,6 +46,6 @@ test:
 
 debug:
 	docker rm -f squid
-	docker run -d --name squid -e DEBUG=1 --entrypoint=/bin/sh -v $$(pwd)/conf/squid.sample.conf:/templates/squid.sample.conf -v $$(pwd)/scripts/docker-entrypoint:/docker-entrypoint satishweb/squid-ssl-proxy:${SQUID_VERSION} -c "sleep 9999999"
-	echo "Run ./docker-entrypoint before this command: squid -NYCd 1 -f /etc/squid/squid.conf"
+	docker run -d --name squid -e DEBUG=1 --entrypoint=/bin/sh -v $$(pwd)/conf/squid.sample.conf:/templates/squid.sample.conf -v $$(pwd)/scripts:/scripts satishweb/squid-ssl-proxy:${SQUID_VERSION} -c "sleep 9999999"
+	echo "Run ./scripts/entrypoint.sh before this command: squid -NYCd 1 -f /etc/squid/squid.conf"
 	docker exec -it squid sh
