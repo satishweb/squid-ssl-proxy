@@ -1,10 +1,10 @@
 # Author: Satish Gaikwad <satish@satishweb.com>
-FROM alpine:latest
-LABEL MAINTAINER satish@satishweb.com
+FROM alpine:3.24
+LABEL MAINTAINER=satish@satishweb.com
 
-ARG SQUID_VERSION 5.9-r0
-ARG SQUID_PROXY_PORT 3128
-ARG SQUID_PROXY_SSLBUMP_PORT 4128
+ARG SQUID_VERSION=7.6-r0
+ARG SQUID_PROXY_PORT=3128
+ARG SQUID_PROXY_SSLBUMP_PORT=4128
 
 #set enviromental values for certificate CA generation
 ENV CERT_CN=squid.local \

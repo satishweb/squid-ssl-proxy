@@ -1,0 +1,3 @@
+# The dependencies of the test suite, pinned to the versions of the lock file
+# of the pip environment.
+requests==2.34.2
