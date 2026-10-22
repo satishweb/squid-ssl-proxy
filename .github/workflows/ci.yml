@@ -71,7 +71,7 @@ jobs:
   dependency-review:
     name: Dependency review
     runs-on: ubuntu-latest
-    if: github.event_name == "pull_request"
+    if: github.event_name == 'pull_request'
     permissions:
       contents: read
     steps:
@@ -92,5 +92,5 @@ jobs:
           fi
 
       - name: Review the dependencies of the pull request
-        if: steps.graph.outputs.available == "true"
+        if: steps.graph.outputs.available == 'true'
         uses: actions/dependency-review-action@v4
