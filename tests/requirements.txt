@@ -1,0 +1,4 @@
+# The dependencies of the test suite, pinned to the versions of the lock file
+# of the pip environment.
+docker==7.2.0
+requests==2.34.2

@@ -1,0 +1,8 @@
+# Findings of the scan of the image that are accepted.
+#
+# The format is the one of the ignore file of trivy, an entry is a finding
+# that is not reported. An entry can have an expiry date, the finding is
+# reported again when the date is reached.
+#
+# The scan of the operating system packages of the image is not affected by
+# this file, every finding there fails the build.
