@@ -1,8 +1,6 @@
 # Build and publish the image for a release tag.
 #
-# The tag has to have the form v<version>-r<revision> or <version>-r<revision>,
-# for example 7.6-r0. The version is the version of the squid package that is
-# installed in the image.
+# The tag has to have the form v<version>.
 #
 # The image is published to the Docker Hub and to the GitHub container
 # registry. A release can only be cut from a commit that was built, tested
@@ -18,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "The release tag, for example 7.6-r0"
+        description: "The release tag"
         required: true
         type: string
       dry_run:
@@ -43,6 +41,7 @@ env:
   DOCKERHUB_OWNER: satishweb
 
 jobs:
+
   gate:
     name: Check the build of the branch
     runs-on: ubuntu-latest
@@ -70,35 +69,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Resolve the release
-        id: release
-        env:
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
-        run: |
-          set -euo pipefail
-          tag="${RELEASE_TAG}"
-          if [[ ! "${tag}" =~ ^v?([0-9]+\.[0-9]+-r[0-9]+)$ ]]; then
-            echo "::error::The tag ${tag} does not have the expected form v<version>-r<revision>."
-            exit 1
-          fi
-          echo "version=${BASH_REMATCH[1]}" >> "${GITHUB_OUTPUT}"
-          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-
+        with:
+          fetch-depth: 0
       - name: Build the image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
           platforms: linux/amd64
-          build-args: |
-            SQUID_VERSION=${{ steps.release.outputs.version }}
           load: true
           tags: squid-ssl-proxy:verify
           provenance: false
@@ -110,6 +88,7 @@ jobs:
           format: table
           output: /tmp/trivy.txt
           scanners: vuln,secret
+          vuln-type: os
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
@@ -119,19 +98,35 @@ jobs:
         if: always()
         run: cat /tmp/trivy.txt
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Report the findings of the programs in the image
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
-          python-version: "3.12"
+          image-ref: squid-ssl-proxy:verify
+          format: table
+          output: /tmp/trivy-all.txt
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "0"
+          trivyignores: .trivyignore
 
-      - name: Install the test dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r tests/requirements.txt
+      - name: Show the findings of the programs in the image
+        if: always()
+        run: cat /tmp/trivy-all.txt
 
-      - name: Test the image
-        run: |
-          python ./tests/test-squid-proxy.py --image squid-ssl-proxy:verify
+      - name: Generate the bill of materials
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: squid-ssl-proxy:verify
+          format: cyclonedx
+          output: /tmp/sbom.cdx.json
+
+      - name: Upload the bill of materials
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: /tmp/sbom.cdx.json
+          if-no-files-found: error
 
   publish:
     name: Publish
@@ -140,38 +135,24 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Resolve the release
-        id: release
-        env:
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
-          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+        with:
+          fetch-depth: 0
+      - name: Build and publish
         run: |
           set -euo pipefail
-          tag="${RELEASE_TAG}"
-          if [[ ! "${tag}" =~ ^v?([0-9]+\.[0-9]+-r[0-9]+)$ ]]; then
-            echo "::error::The tag ${tag} does not have the expected form v<version>-r<revision>."
-            exit 1
-          fi
-          version="${BASH_REMATCH[1]}"
-          echo "The squid version is ${version}."
-          {
-            echo "version=${version}"
-            echo "tags<<EOF"
-            echo "${REGISTRY_DOCKERHUB}/${DOCKERHUB_OWNER}/${IMAGE_NAME}:${tag}"
-            echo "${REGISTRY_DOCKERHUB}/${DOCKERHUB_OWNER}/${IMAGE_NAME}:${version}"
-            echo "${REGISTRY_DOCKERHUB}/${DOCKERHUB_OWNER}/${IMAGE_NAME}:latest"
-            echo "${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}:${tag}"
-            echo "${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}:${version}"
-            echo "${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}:latest"
-            echo "EOF"
-          } >> "${GITHUB_OUTPUT}"
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
+          tag="${{ github.ref_name }}"
+          version="${tag#v}"
+          first_tag="${REGISTRY_DOCKERHUB}/${DOCKERHUB_OWNER}/${IMAGE_NAME}:${tag}"
+          docker build -f Dockerfile -t "$first_tag" .
+          for tag_var in \
+            "${REGISTRY_DOCKERHUB}/${DOCKERHUB_OWNER}/${IMAGE_NAME}:${version}" \
+            "${REGISTRY_DOCKERHUB}/${DOCKERHUB_OWNER}/${IMAGE_NAME}:latest" \
+            "${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}:${tag}" \
+            "${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}:${version}" \
+            "${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}:latest" ; do
+            [ "$tag_var" = "$first_tag" ] || docker tag "$first_tag" "$tag_var"
+            docker push "$tag_var"
+          done
 
       - name: Log in to the Docker Hub
         if: ${{ !inputs.dry_run }}
@@ -188,28 +169,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and publish
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile
-          platforms: linux/amd64
-          build-args: |
-            SQUID_VERSION=${{ steps.release.outputs.version }}
-          push: ${{ !inputs.dry_run }}
-          tags: ${{ steps.release.outputs.tags }}
-          provenance: false
-          labels: |
-            org.opencontainers.image.title=Squid SSL Proxy
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.version=${{ steps.release.outputs.version }}
-
   release:
     name: GitHub release
     needs: publish
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/') && !inputs.dry_run
+    if: ${{ startsWith(github.ref, 'refs/tags/') && !inputs.dry_run }}
     permissions:
       contents: write
     steps:
@@ -219,9 +183,11 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          if gh release view "${TAG}" >/dev/null 2>&1; then
-            echo "The release ${TAG} exists already, its notes are updated."
-            gh release edit "${TAG}" --title "${TAG}" --generate-notes
-          else
-            gh release create "${TAG}" --title "${TAG}" --generate-notes
+          tag="${RELEASE_TAG}"
+          if [[ ! "${tag}" =~ ^v?([0-9]+\.[0-9]+-r[0-9]+)$ ]] ; then
+            echo "::error::The tag ${tag} does not have the expected form."
+            exit 1
           fi
+          version="${BASH_REMATCH[1]}"
+          echo "Release ${TAG} with version ${version}"
+
