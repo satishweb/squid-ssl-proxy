@@ -2,8 +2,8 @@
 #
 # The tag has to have the form v<version>.
 #
-# The image is published to the Docker Hub and to the GitHub container
-# registry. A release can only be cut from a commit that was built, tested
+# The image is published to the GitHub container registry.
+# A release can only be cut from a commit that was built, tested
 # and scanned.
 
 name: Release
@@ -35,10 +35,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  REGISTRY_DOCKERHUB: docker.io
   REGISTRY_GHCR: ghcr.io
   IMAGE_NAME: squid-ssl-proxy
-  DOCKERHUB_OWNER: satishweb
 
 jobs:
 
@@ -142,11 +140,11 @@ jobs:
           set -euo pipefail
           tag="${{ github.ref_name }}"
           version="${tag#v}"
-          first_tag="${REGISTRY_DOCKERHUB}/${DOCKERHUB_OWNER}/${IMAGE_NAME}:${tag}"
+          first_tag="${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}:${tag}"
           docker build -f Dockerfile -t "$first_tag" .
           for tag_var in \
-            "${REGISTRY_DOCKERHUB}/${DOCKERHUB_OWNER}/${IMAGE_NAME}:${version}" \
-            "${REGISTRY_DOCKERHUB}/${DOCKERHUB_OWNER}/${IMAGE_NAME}:latest" \
+            "${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}:${version}" \
+            "${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}:latest" \
             "${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}:${tag}" \
             "${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}:${version}" \
             "${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}:latest" ; do
@@ -154,15 +152,7 @@ jobs:
             docker push "$tag_var"
           done
 
-      - name: Log in to the Docker Hub
-        if: ${{ !inputs.dry_run }}
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: Log in to the GitHub container registry
-        if: ${{ !inputs.dry_run }}
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY_GHCR }}
