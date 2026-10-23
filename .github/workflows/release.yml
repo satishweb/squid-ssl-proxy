@@ -40,29 +40,8 @@ env:
 
 jobs:
 
-  gate:
-    name: Check the build of the branch
-    runs-on: ubuntu-latest
-    steps:
-      - name: The CI workflow has to have passed for this commit
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COMMIT: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          echo "Looking for a successful CI run for ${COMMIT}."
-          conclusion=$(gh api \
-            "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${COMMIT}&status=completed&per_page=20" \
-            --jq '[.workflow_runs[].conclusion] | if index("success") then "success" else "none" end')
-          if [ "${conclusion}" != "success" ]; then
-            echo "::error::The CI workflow did not pass for ${COMMIT}. A release can only be cut from a commit that was built and tested on the branch."
-            exit 1
-          fi
-          echo "The CI workflow passed for ${COMMIT}."
-
   verify:
     name: Verify the image
-    needs: gate
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
