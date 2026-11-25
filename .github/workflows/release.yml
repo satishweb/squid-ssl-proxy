@@ -2,7 +2,7 @@
 #
 # The tag has to have the form v<version>.
 #
-# The image is published to the GitHub container registry.
+# The image is published to Docker Hub and the GitHub container registry.
 # A release can only be cut from a commit that was built, tested
 # and scanned.
 
@@ -37,6 +37,9 @@ concurrency:
 env:
   REGISTRY_GHCR: ghcr.io
   IMAGE_NAME: squid-ssl-proxy
+  REGISTRY_DOCKERHUB: docker.io
+  DOCKERHUB_OWNER: satishweb
+  PLATFORMS: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6
 
 jobs:
 
@@ -114,6 +117,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Log in to the GitHub container registry
         uses: docker/login-action@v3
         with:
@@ -121,22 +133,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and publish
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           set -euo pipefail
-          tag="${{ github.ref_name }}"
+          tag="${RELEASE_TAG}"
           version="${tag#v}"
-          first_tag="${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}:${tag}"
-          docker build -f Dockerfile -t "$first_tag" .
-          for tag_var in \
-            "${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}:${version}" \
-            "${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}:latest" \
-            "${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}:${tag}" \
-            "${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}:${version}" \
-            "${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}:latest" ; do
-            [ "$tag_var" = "$first_tag" ] || docker tag "$first_tag" "$tag_var"
-            docker push "$tag_var"
+          tags=()
+          for image in \
+            "${REGISTRY_DOCKERHUB}/${DOCKERHUB_OWNER}/${IMAGE_NAME}" \
+            "${REGISTRY_GHCR}/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}" ; do
+            for image_tag in "${tag}" "${version}" latest ; do
+              tags+=(--tag "${image}:${image_tag}")
+            done
           done
-
+          docker buildx build \
+            --platform "${PLATFORMS}" \
+            --file Dockerfile \
+            --provenance=false \
+            --push \
+            "${tags[@]}" .
 
   release:
     name: GitHub release
